@@ -9,15 +9,23 @@ import UIKit
 import Alamofire
 
 class CountryModel {
-    var imageUrl = ""
-    var countryName = ""
+    var image: UIImage?
+    var countryName: String
+    
+    init() {
+        image = UIImage(systemName: "flag")
+        countryName = ""
+    }
+    
 }
 
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var tableView: UITableView!
     var countriesList: [CountryModel] = [CountryModel]()
-    let searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&indexpageids&titles="
+    //let searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&indexpageids&titles="
+    let searchUrlStart = "https://www.countryflags.io/"
+    let searchUrlEnd = "/flat/24.png"
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,29 +35,45 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         
         for localeCode in NSLocale.isoCountryCodes {
             let countryNameTemp = getCountryName(countryCode: localeCode)
-            let stringUrl = searchUrl + countryNameTemp.replacingOccurrences(of: " ", with: "_")
-            AF.request(stringUrl).responseJSON { response in
+            //let stringUrl = searchUrl + countryNameTemp.replacingOccurrences(of: " ", with: "_")
+            let stringUrl = searchUrlStart + localeCode + searchUrlEnd
+            
+            let countryTemp = CountryModel()
+            countryTemp.countryName = countryNameTemp
+            AF.request(stringUrl).response { response in
                 switch response.result {
                 case .success(let value):
-                    if let resp = value as? [String: Any] {
-                        let queryData = resp["query"] as? [String: Any]
-                        let pagesData = queryData?["pages"] as? [String: Any]
-                        let pageId = pagesData?.keys.first
-                        let countryData = pagesData?[pageId!] as? [String: Any]
-                        let sourceData = countryData?["thumbnail"] as? [String: Any]
-                        let source = (sourceData?["source"] ?? "") as! String
-                        let countryTemp = CountryModel()
-                        countryTemp.countryName = countryNameTemp
-                        countryTemp.imageUrl = source
-                        self.countriesList.append(countryTemp)
-                        self.countriesList.sort(by: { $0.countryName < $1.countryName })
-                        self.tableView?.reloadData()
-                    }
+                    countryTemp.image = UIImage(data: value ?? NSData() as Data, scale: 1)
+                    self.countriesList.append(countryTemp)
+                    self.countriesList.sort(by: { $0.countryName < $1.countryName })
+                    self.tableView?.reloadData()
                 case .failure(let error):
                     print(error)
                 }
             }
-            //}
+            
+            /*
+            AF.request(stringUrl).responseJSON { response in
+             switch response.result {
+             case .success(let value):
+                 if let resp = value as? [String: Any] {
+                     let queryData = resp["query"] as? [String: Any]
+                     let pagesData = queryData?["pages"] as? [String: Any]
+                     let pageId = pagesData?.keys.first
+                     let countryData = pagesData?[pageId!] as? [String: Any]
+                     let sourceData = countryData?["thumbnail"] as? [String: Any]
+                     let source = (sourceData?["source"] ?? "") as! String
+                     let countryTemp = CountryModel()
+                     countryTemp.countryName = countryNameTemp
+                     countryTemp.imageUrl = source
+                     self.countriesList.append(countryTemp)
+                     self.countriesList.sort(by: { $0.countryName < $1.countryName })
+                     self.tableView?.reloadData()
+                 }
+             case .failure(let error):
+                 print(error)
+             }
+             */
             //countriesFlagsUrl.append(takeImageUrl(countryUrl: stringUrl))
         }
         self.countriesList.sort(by: { $0.countryName < $1.countryName })
@@ -83,6 +107,13 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         let countryTemp = countriesList[indexPath.row]
         cell.countryNameLabel.text = countryTemp.countryName
         
+        if (countryTemp.image != nil) {
+            cell.countryFlagImageView.image = countryTemp.image
+        }
+        else {
+            cell.countryFlagImageView.image = UIImage(systemName: "flag")
+        }
+        /*
         if (countryTemp.imageUrl != ""){
             //if countryTemp.imageUrl.contains("Flag") {
                 let url = URL(string: countryTemp.imageUrl)!
@@ -91,6 +122,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
                 }
             //}
         }
+        */
         //cell.countryFlagLabel.text = getCountryFlag(countryCode: countriesCodes[indexPath.row])
         return cell
     }
