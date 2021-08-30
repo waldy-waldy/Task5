@@ -1,0 +1,4 @@
+${PODS_ROOT}/Target Support Files/Pods-Task5/Pods-Task5-frameworks.sh
+${BUILT_PRODUCTS_DIR}/Alamofire/Alamofire.framework
+${BUILT_PRODUCTS_DIR}/SwiftyJSON/SwiftyJSON.framework
+${BUILT_PRODUCTS_DIR}/XMLMapper/XMLMapper.framework

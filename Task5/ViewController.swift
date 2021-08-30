@@ -8,12 +8,16 @@
 import UIKit
 import Alamofire
 
+class CountryModel {
+    var imageUrl = ""
+    var countryName = ""
+}
+
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var tableView: UITableView!
-    var countriesNames: [String] = []
-    var countriesFlagsUrl: [String] = []
-    var searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&indexpageids&titles="
+    var countriesList: [CountryModel] = [CountryModel]()
+    let searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&indexpageids&titles="
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,30 +25,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         let cellNib = UINib(nibName: "CountryCell", bundle: nil)
         tableView.register(cellNib, forCellReuseIdentifier: "countryCell")
         
-        countriesNames.removeAll()
-        countriesFlagsUrl.removeAll()
-        
         for localeCode in NSLocale.isoCountryCodes {
             let countryNameTemp = getCountryName(countryCode: localeCode)
             let stringUrl = searchUrl + countryNameTemp.replacingOccurrences(of: " ", with: "_")
-            countriesNames.append(countryNameTemp)
-            countriesFlagsUrl.append(takeImageUrl(countryUrl: stringUrl))
-        }
-        print(countriesFlagsUrl)
-        tableView.reloadData()
-        // Do any additional setup after loading the view.
-    }
-
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-    }
-    
-    func takeImageUrl(countryUrl: String) -> String {
-        
-        var imageUrl: String = "hello"
-        if let encoded = countryUrl.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed), let url = URL(string: encoded) {
-            AF.request(url).responseJSON { response in
+            AF.request(stringUrl).responseJSON { response in
                 switch response.result {
                 case .success(let value):
                     if let resp = value as? [String: Any] {
@@ -54,32 +38,27 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
                         let countryData = pagesData?[pageId!] as? [String: Any]
                         let sourceData = countryData?["thumbnail"] as? [String: Any]
                         let source = (sourceData?["source"] ?? "") as! String
-                        imageUrl = source
-                        print(imageUrl)
-                        //imageUrl = resp["query"]["pages"][pageid]["thumbnail"]["source"] as? String
+                        let countryTemp = CountryModel()
+                        countryTemp.countryName = countryNameTemp
+                        countryTemp.imageUrl = source
+                        self.countriesList.append(countryTemp)
+                        self.countriesList.sort(by: { $0.countryName < $1.countryName })
+                        self.tableView?.reloadData()
                     }
                 case .failure(let error):
                     print(error)
                 }
             }
+            //}
+            //countriesFlagsUrl.append(takeImageUrl(countryUrl: stringUrl))
         }
-        print(imageUrl)
-        /*
-        let request = AF.request(countryUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
-        request.responseJSON { response in
-            switch response.result {
-                case .success(let JSONString):
-                    //let data = XMLMapper<SearchSuggestion>().map(XMLString: xmlString)
-                    //print(type(of: response.data))
-                    let resp = JSONString as! NSDictionary
-                    let pageid = (resp.object(forKey: "query")! as! NSDictionary).object(forKey: "pageids")
-                    imageUrl = ""
-                case .failure(let error):
-                    print("Request failed with error: \(error)")
-                    imageUrl = ""
-            }
-        }*/
-        return imageUrl
+        self.countriesList.sort(by: { $0.countryName < $1.countryName })
+        tableView.reloadData()
+    }
+
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
     }
     
     func getCountryName(countryCode: String) -> String {
@@ -95,18 +74,23 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
     */
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return countriesNames.count
+        return countriesList.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "countryCell", for: indexPath) as! CountryCell
         
-        cell.countryNameLabel.text = countriesNames[indexPath.row]
+        let countryTemp = countriesList[indexPath.row]
+        cell.countryNameLabel.text = countryTemp.countryName
         
-        //let url = URL(string: countriesFlagsUrl[indexPath.row])!
-        //if let data = try? Data(contentsOf: url) {
-        //    cell.countryFlagImageView.image = UIImage(data: data)
-        //}
+        if (countryTemp.imageUrl != ""){
+            //if countryTemp.imageUrl.contains("Flag") {
+                let url = URL(string: countryTemp.imageUrl)!
+                if let data = try? Data(contentsOf: url) {
+                    cell.countryFlagImageView.image = UIImage(data: data)
+                }
+            //}
+        }
         //cell.countryFlagLabel.text = getCountryFlag(countryCode: countriesCodes[indexPath.row])
         return cell
     }
@@ -117,7 +101,8 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if let destination = segue.destination as? CountryInfoViewController {
-            destination.countryName = countriesNames[(tableView.indexPathForSelectedRow?.row)!]
+            let countryTemp = countriesList[(tableView.indexPathForSelectedRow?.row)!]
+            destination.countryName = countryTemp.countryName
             tableView.deselectRow(at: tableView.indexPathForSelectedRow!, animated: true)
         }
     }
