@@ -9,12 +9,12 @@ import UIKit
 import Alamofire
 
 class CountryModel {
-    var image: UIImage?
+    var countryCode: String
     var countryName: String
     
-    init() {
-        image = UIImage(systemName: "flag")
-        countryName = ""
+    init(_countryCode: String, _countryName: String) {
+        countryCode = _countryCode
+        countryName = _countryName
     }
     
 }
@@ -35,48 +35,9 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         
         for localeCode in NSLocale.isoCountryCodes {
             let countryNameTemp = getCountryName(countryCode: localeCode)
-            //let stringUrl = searchUrl + countryNameTemp.replacingOccurrences(of: " ", with: "_")
-            let stringUrl = searchUrlStart + localeCode + searchUrlEnd
-            
-            let countryTemp = CountryModel()
-            countryTemp.countryName = countryNameTemp
-            AF.request(stringUrl).response { response in
-                switch response.result {
-                case .success(let value):
-                    countryTemp.image = UIImage(data: value ?? NSData() as Data, scale: 1)
-                    self.countriesList.append(countryTemp)
-                    self.countriesList.sort(by: { $0.countryName < $1.countryName })
-                    self.tableView?.reloadData()
-                case .failure(let error):
-                    print(error)
-                }
-            }
-            
-            /*
-            AF.request(stringUrl).responseJSON { response in
-             switch response.result {
-             case .success(let value):
-                 if let resp = value as? [String: Any] {
-                     let queryData = resp["query"] as? [String: Any]
-                     let pagesData = queryData?["pages"] as? [String: Any]
-                     let pageId = pagesData?.keys.first
-                     let countryData = pagesData?[pageId!] as? [String: Any]
-                     let sourceData = countryData?["thumbnail"] as? [String: Any]
-                     let source = (sourceData?["source"] ?? "") as! String
-                     let countryTemp = CountryModel()
-                     countryTemp.countryName = countryNameTemp
-                     countryTemp.imageUrl = source
-                     self.countriesList.append(countryTemp)
-                     self.countriesList.sort(by: { $0.countryName < $1.countryName })
-                     self.tableView?.reloadData()
-                 }
-             case .failure(let error):
-                 print(error)
-             }
-             */
-            //countriesFlagsUrl.append(takeImageUrl(countryUrl: stringUrl))
+            let countryTemp = CountryModel(_countryCode: localeCode, _countryName: countryNameTemp)
+            countriesList.append(countryTemp)
         }
-        self.countriesList.sort(by: { $0.countryName < $1.countryName })
         tableView.reloadData()
     }
 
@@ -106,12 +67,25 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         
         let countryTemp = countriesList[indexPath.row]
         cell.countryNameLabel.text = countryTemp.countryName
+        var stringUrl = URL(string: searchUrlStart)!
+        stringUrl.appendPathComponent(countryTemp.countryCode)
+        stringUrl.appendPathComponent(searchUrlEnd)
+        let url = URLRequest(url: stringUrl as URL)
         
-        if (countryTemp.image != nil) {
-            cell.countryFlagImageView.image = countryTemp.image
-        }
-        else {
-            cell.countryFlagImageView.image = UIImage(systemName: "flag")
+        AF.request(url).response { response in
+            switch response.result {
+            case .success(let value):
+                if let data = value {
+                    if (countryTemp.countryName == cell.countryNameLabel.text) {
+                        cell.countryFlagImageView.image = UIImage(data: data)
+                    }
+                }
+                else {
+                    cell.countryFlagImageView.image = UIImage(systemName: "flag")
+                }
+            case .failure(let error):
+                print(error)
+            }
         }
         /*
         if (countryTemp.imageUrl != ""){
