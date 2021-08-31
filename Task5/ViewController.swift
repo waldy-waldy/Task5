@@ -23,9 +23,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
 
     @IBOutlet weak var tableView: UITableView!
     var countriesList: [CountryModel] = [CountryModel]()
-    //let searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&indexpageids&titles="
+    //let searchUrl =  "https://en.wikipedia.org/w/api.php?action=query&format=json&pro p=pageimages&indexpageids&titles="
     let searchUrlStart = "https://www.countryflags.io/"
     let searchUrlEnd = "/flat/24.png"
+    let imageCache = NSCache<NSString, UIImage>()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -72,19 +73,26 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         stringUrl.appendPathComponent(searchUrlEnd)
         let url = URLRequest(url: stringUrl as URL)
         
-        AF.request(url).response { response in
-            switch response.result {
-            case .success(let value):
-                if let data = value {
-                    if (countryTemp.countryName == cell.countryNameLabel.text) {
-                        cell.countryFlagImageView.image = UIImage(data: data)
+        if let image = self.imageCache.object(forKey: cell.countryNameLabel.text as! NSString) as? UIImage {
+            cell.countryFlagImageView.image = image
+        }
+        else {
+            AF.request(url).response { response in
+                switch response.result {
+                case .success(let value):
+                    if let data = value {
+                        let img = UIImage(data: data)
+                        self.imageCache.setObject(img! as UIImage , forKey: countryTemp.countryName as! NSString)
+                        if (countryTemp.countryName == cell.countryNameLabel.text) {
+                            cell.countryFlagImageView.image = img
+                        }
                     }
+                    else {
+                        cell.countryFlagImageView.image = UIImage(systemName: "flag")
+                    }
+                case .failure(let error):
+                    print(error)
                 }
-                else {
-                    cell.countryFlagImageView.image = UIImage(systemName: "flag")
-                }
-            case .failure(let error):
-                print(error)
             }
         }
         /*
